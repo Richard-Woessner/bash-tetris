@@ -41,6 +41,7 @@ DELAY=1          # initial delay between piece movements
 DELAY_FACTOR=0.8 # this value controld delay decrease for each level up
 
 # color codes
+BLACK=0
 RED=1
 GREEN=2
 YELLOW=3
@@ -63,7 +64,7 @@ SCORE_COLOR=$GREEN
 
 # Location and color of help information
 HELP_X=58
-HELP_Y=1
+HELP_Y=2
 HELP_COLOR=$CYAN
 
 # Next piece location
@@ -179,6 +180,7 @@ help=(
 "       or"
 "      s: up"
 "a: left,  d: right"
+"      w: down"
 "    space: drop"
 "      q: quit"
 "  c: toggle color"
@@ -307,7 +309,7 @@ get_random_next() {
     # now let's get next piece
     ((next_piece = RANDOM % ${#piece[@]}))
     ((next_piece_rotation = RANDOM % (${#piece[$next_piece]} / 8)))
-    ((next_piece_color = RANDOM % ${#colors[@]}))
+    ((next_piece_color = colors[RANDOM % ${#colors[@]}])) # Ensure next_piece_color is always valid
     show_next
 }
 
@@ -378,7 +380,7 @@ reader() {
     # commands is associative array, which maps pressed keys to commands, sent to controller
     declare -A commands=([A]=$ROTATE [C]=$RIGHT [D]=$LEFT
         [_S]=$ROTATE [_A]=$LEFT [_D]=$RIGHT
-        [_]=$DROP [_Q]=$QUIT [_H]=$TOGGLE_HELP [_N]=$TOGGLE_NEXT [_C]=$TOGGLE_COLOR)
+        [_]=$DROP [_Q]=$QUIT [_H]=$TOGGLE_HELP [_N]=$TOGGLE_NEXT [_C]=$TOGGLE_COLOR [_W]=$DOWN)
 
     while read -s -n 1 key ; do
         case "$a$b$key" in
@@ -516,7 +518,25 @@ controller() {
         screen_buffer=""          # ... and reset it
         read -s -n 1 cmd          # read next command from stdout
         ${commands[$cmd]}         # run command
+        print_current_color       # print the current color
     done
+}
+
+print_current_color() {
+    local color_name
+    case $current_piece_color in
+        $RED) color_name="RED" ;;
+        $GREEN) color_name="GREEN" ;;
+        $YELLOW) color_name="YELLOW" ;;
+        $BLUE) color_name="BLUE" ;;
+        $FUCHSIA) color_name="FUCHSIA" ;;
+        $CYAN) color_name="CYAN" ;;
+        $WHITE) color_name="WHITE" ;;
+        *) color_name="UNKNOWN" ;; # Handle unexpected values
+    esac
+    set_fg $WHITE
+    xyprint $((PLAYFIELD_X + PLAYFIELD_W * 2 + 10)) 1 "Color: $color_name"
+    reset_colors
 }
 
 stty_g=`stty -g` # let's save terminal state
